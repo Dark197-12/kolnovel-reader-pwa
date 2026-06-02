@@ -10,6 +10,7 @@ import {
   saveReaderSettings, 
   saveReadingProgress, 
   getReadingProgress,
+  markChapterRead,
   ReaderSettings,
   DEFAULT_SETTINGS 
 } from "@/lib/storage";
