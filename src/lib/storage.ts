@@ -159,14 +159,18 @@ export function saveReadingProgress(
 export function markChapterRead(novelSlug: string, chapterSlug: string) {
   const key = `read_chapters_${novelSlug}`;
   const existing = JSON.parse(localStorage.getItem(key) || "[]");
-  if (!existing.includes(chapterSlug)) {
-    existing.push(chapterSlug);
+  const normalizedSlug = decodeURIComponent(chapterSlug);
+  if (!existing.includes(normalizedSlug)) {
+    existing.push(normalizedSlug);
     localStorage.setItem(key, JSON.stringify(existing));
   }
 }
 
 export function getReadChapters(novelSlug: string): string[] {
   const key = `read_chapters_${novelSlug}`;
-  return JSON.parse(localStorage.getItem(key) || "[]");
+  const stored = JSON.parse(localStorage.getItem(key) || "[]");
+  // Normalize all stored slugs to decoded form
+  return stored.map((s: string) => {
+    try { return decodeURIComponent(s); } catch { return s; }
+  });
 }
-

@@ -279,7 +279,7 @@ export default function NovelDetailsPage({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {sortedChapters.map((chapter: any) => {
-             const isRead = readChapters.includes(chapter.slug);
+             const isRead = readChapters.includes(decodeURIComponent(chapter.slug));
              const isCurrent = progress && progress.chapterSlug === chapter.slug;
              return (
                 <Link 
