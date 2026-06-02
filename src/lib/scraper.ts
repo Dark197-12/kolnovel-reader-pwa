@@ -189,6 +189,7 @@ export async function getNovelDetails(slug: string, baseUrl: string = DEFAULT_BA
     if (href) {
       const parts = href.replace(/\/$/, "").split("/");
       chapterSlug = parts[parts.length - 1];
+      try { chapterSlug = decodeURIComponent(chapterSlug); } catch {}
     }
 
     const numText = el.find(".epl-num, .chapnum, .chapter-number").first().text().trim();
@@ -326,7 +327,7 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
   };
 
   contentWrapper.contents().each((_, el) => processNode(el));
-  
+
   // Find next/prev chapter links if they exist on the page to help with navigation
   let nextChapterSlug = "";
   let prevChapterSlug = "";
@@ -340,6 +341,7 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
     if (href) {
       const parts = href.replace(/\/$/, "").split("/");
       targetSlug = parts[parts.length - 1];
+      try { targetSlug = decodeURIComponent(targetSlug); } catch {}
     }
     
     if (targetSlug) {
