@@ -61,6 +61,8 @@ export default function ChapterReaderPage({
           throw new Error(data.error);
         }
         setChapter(data);
+        if (novelSlug) markChapterRead(novelSlug, slug);
+
         scrollRef.current = false; // Reset scroll restoration trigger
       } catch (err: any) {
         console.error(err);

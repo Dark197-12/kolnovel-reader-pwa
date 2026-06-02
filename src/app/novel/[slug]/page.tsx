@@ -1,5 +1,5 @@
 "use client";
-
+import { getReadChapters } from "@/lib/storage";
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -107,6 +107,7 @@ export default function NovelDetailsPage({
     : [...novel.chapters]; // Keep newest first
 
   // Start/Resume reading target slug
+  const readChapters = getReadChapters(slug);
   const readingTargetSlug = progress 
     ? progress.chapterSlug 
     : (novel.chapters.length > 0 ? novel.chapters[novel.chapters.length - 1].slug : ""); // Index length-1 is oldest in Themesia list
@@ -278,8 +279,9 @@ export default function NovelDetailsPage({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {sortedChapters.map((chapter: any) => {
-              const isRead = progress && progress.chapterSlug === chapter.slug;
-              return (
+             const isRead = readChapters.includes(chapter.slug);
+             const isCurrent = progress && progress.chapterSlug === chapter.slug;
+             return (
                 <Link 
                   key={chapter.slug} 
                   href={`/chapter/${chapter.slug}?novel=${slug}`}
@@ -288,8 +290,8 @@ export default function NovelDetailsPage({
                     justifyContent: "space-between",
                     alignItems: "center",
                     padding: "12px 14px",
-                    backgroundColor: isRead ? "var(--accent-glow)" : "var(--bg-surface)",
-                    border: `1px solid ${isRead ? "var(--accent-color)" : "var(--border-color)"}`,
+                    backgroundColor: isCurrent ? "var(--accent-glow)" : "var(--bg-surface)",
+                    border: `1px solid ${isCurrent ? "var(--accent-color)" : "var(--border-color)"}`,
                     borderRadius: "12px",
                     transition: "transform 0.15s ease",
                     cursor: "pointer"
@@ -300,12 +302,14 @@ export default function NovelDetailsPage({
                       style={{ 
                         fontSize: "0.85rem", 
                         fontWeight: "600", 
-                        color: isRead ? "var(--accent-color)" : "var(--text-primary)",
+                        color: isCurrent ? "var(--accent-color)" : isRead ? "var(--text-secondary)" : "var(--text-primary)",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
-                        textOverflow: "ellipsis"
+                        textOverflow: "ellipsis",
+                        opacity: isRead && !isCurrent ? 0.6 : 1
                       }}
                     >
+                      {isRead && !isCurrent && <span style={{ color: "var(--accent-color)", marginLeft: "6px" }}>✓</span>}
                       {chapter.name}
                     </span>
                   </div>
