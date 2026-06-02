@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e131f" />
+      <stop offset="50%" stop-color="#0a0a0c" />
+      <stop offset="100%" stop-color="#020205" />
+    </linearGradient>
+
+    <!-- Gold Metallic Gradient -->
+    <linearGradient id="gold-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b8860b" />
+      <stop offset="25%" stop-color="#ffd700" />
+      <stop offset="50%" stop-color="#fff8dc" />
+      <stop offset="75%" stop-color="#ffd700" />
+      <stop offset="100%" stop-color="#d4af37" />
+    </linearGradient>
+
+    <!-- Pages Gradient -->
+    <linearGradient id="pages-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4a5568" />
+      <stop offset="50%" stop-color="#cbd5e0" />
+      <stop offset="100%" stop-color="#4a5568" />
+    </linearGradient>
+
+    <!-- Soft Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
+
+  <!-- Outer Border Ring -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="url(#gold-grad)" stroke-width="4" opacity="0.3" />
+
+  <g transform="translate(0, 20)">
+    <!-- Open Book Pages (Background Glow) -->
+    <path d="M 128 320 Q 256 360 384 320 L 384 220 Q 256 260 128 220 Z" fill="url(#pages-grad)" opacity="0.25" filter="url(#glow)" />
+    
+    <!-- Open Book Paths -->
+    <!-- Left Page -->
+    <path d="M 256 340 Q 180 300 110 320 L 110 200 Q 180 180 256 220 Z" fill="url(#pages-grad)" />
+    <!-- Right Page -->
+    <path d="M 256 340 Q 332 300 402 320 L 402 200 Q 332 180 256 220 Z" fill="url(#pages-grad)" />
+    
+    <!-- Center Spine -->
+    <rect x="252" y="210" width="8" height="135" rx="4" fill="url(#gold-grad)" />
+
+    <!-- Crown Icon (Glow and Gold) -->
+    <!-- Crown Base -->
+    <path d="M 176 170 L 336 170 L 320 185 L 192 185 Z" fill="url(#gold-grad)" filter="url(#glow)" />
+    
+    <!-- Crown Peaks -->
+    <path d="M 176 170 
+             L 160 100 
+             L 210 135 
+             L 256 80 
+             L 302 135 
+             L 352 100 
+             L 336 170 
+             Z" 
+          fill="url(#gold-grad)" 
+          filter="url(#glow)" />
+
+    <!-- Crown Jewels (Details) -->
+    <circle cx="160" cy="100" r="6" fill="#fff" />
+    <circle cx="256" cy="80" r="8" fill="#fff" />
+    <circle cx="352" cy="100" r="6" fill="#fff" />
+    <circle cx="256" cy="140" r="5" fill="#e53e3e" />
+    <circle cx="210" cy="150" r="4" fill="#3182ce" />
+    <circle cx="302" cy="150" r="4" fill="#3182ce" />
+  </g>
+</svg>
