@@ -178,28 +178,29 @@ export async function getNovelDetails(slug: string, baseUrl: string = DEFAULT_BA
   // Typical structure: .clist ul li, or .eplister ul li
   const chapters: any[] = [];
   
-  $(".clist ul li, .eplister ul li, .chapter-list ul li").each((_, element) => {
+  $(".clist ul li, .eplister ul li, .chapter-list ul li, ul li").each((_, element) => {
     const el = $(element);
     const linkEl = el.find("a").first();
     const href = linkEl.attr("href") || "";
-    
-    // Extract chapter slug
-    let chapterSlug = href;
+
+    // This site uses URLs like /shaag24{novel-slug}z435ggye-{id}/
+    // Extract the full path segment as the slug
+    let chapterSlug = "";
     if (href) {
       const parts = href.replace(/\/$/, "").split("/");
       chapterSlug = parts[parts.length - 1];
     }
-    
+
     const numText = el.find(".epl-num, .chapnum, .chapter-number").first().text().trim();
     const titleText = el.find(".epl-title, .chaptitle, .chapter-title").first().text().trim();
     const dateText = el.find(".epl-date, .chapdate, .chapter-date").first().text().trim();
-    
-    // Clean name
-    const chapterName = numText && titleText 
-      ? `${numText}: ${titleText}` 
+
+    const chapterName = numText && titleText
+      ? `${numText}: ${titleText}`
       : (numText || titleText || linkEl.text().trim());
-      
-    if (chapterSlug) {
+
+    // Only accept slugs that match the kolnovel chapter URL pattern
+    if (chapterSlug && chapterSlug.includes("shaag24") && chapterName) {
       chapters.push({
         name: cleanText(chapterName),
         slug: chapterSlug,
@@ -229,9 +230,9 @@ export async function getNovelDetails(slug: string, baseUrl: string = DEFAULT_BA
 export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_BASE_URL) {
   // URLs to try. Sometimes chapters are direct, sometimes prefixed
   const urlsToTry = [
+    `https://free.kolnovel.com/${slug}/`,
     `${baseUrl}/${slug}/`,
     `${baseUrl}/novel/${slug}/`,
-    `${baseUrl}/chapter/${slug}/`
   ];
   
   let html = "";
