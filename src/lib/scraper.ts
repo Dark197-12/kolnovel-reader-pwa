@@ -265,7 +265,8 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
     const tag = el.tagName?.toLowerCase();
 
     if (tag === "img") {
-      // It's an image — grab src
+      // Only grab img tags that are NOT inside a <p> (those will be caught when we process the <p>)
+      if ($(el).parents("p").length > 0) return;
       const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || "";
       if (src && !src.includes("data:image")) {
         paragraphs.push({ type: "image", src });
@@ -273,20 +274,27 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       return;
     }
 
-    // It's a <p> — skip if it contains child images (handled above)
-    if ($(el).find("img").length > 0) {
-      $(el).find("img").each((_, imgEl) => {
-        const src = $(imgEl).attr("src") || $(imgEl).attr("data-src") || "";
+    // It's a <p>
+    const imgs = $(el).find("img");
+    if (imgs.length > 0) {
+      // Render images inside this <p>
+      imgs.each((_, imgEl) => {
+        const src = $(imgEl).attr("src") || $(imgEl).attr("data-src") || $(imgEl).attr("data-lazy-src") || "";
         if (src && !src.includes("data:image")) {
           paragraphs.push({ type: "image", src });
         }
       });
+      // Also grab any text alongside the image
+      const text = $(el).clone().find("img").remove().end().text().trim();
+      const cleaned = cleanText(text);
+      if (cleaned && cleaned.length > 3) {
+        paragraphs.push({ type: "text", content: cleaned });
+      }
       return;
     }
 
+    // Plain text <p>
     const text = $(el).text().trim();
-
-    // Strip ad scripts and junk
     if (
       !text ||
       text.length < 3 ||
@@ -294,7 +302,7 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       text.includes("pubfuturetag") ||
       text.includes("function(") ||
       text.includes("var ") ||
-      text.match(/^\d{5,}$/) ||        // pure number spam like 111111111
+      text.match(/^\d{5,}$/) ||
       text.startsWith("http")
     ) return;
 
@@ -303,17 +311,6 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       paragraphs.push({ type: "text", content: cleaned });
     }
   });
-  
-  // Fallback: If no paragraphs found, split the raw html by break lines
-  if (paragraphs.length === 0) {
-    const rawText = contentWrapper.text();
-    rawText.split("\n").forEach(line => {
-      const cleaned = cleanText(line);
-      if (cleaned && cleaned.length > 3) {
-        paragraphs.push(cleaned);
-      }
-    });
-  }
   
   // Find next/prev chapter links if they exist on the page to help with navigation
   let nextChapterSlug = "";
