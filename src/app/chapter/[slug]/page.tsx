@@ -256,16 +256,26 @@ export default function ChapterReaderPage({
         </h2>
 
         {chapter.paragraphs && chapter.paragraphs.length > 0 ? (
-          chapter.paragraphs.map((pText: string, idx: number) => (
-            <p 
-              key={idx} 
-              style={{ 
-                marginBottom: "1.5em",
-                textIndent: "0.5em"
-              }}
-            >
-              {pText}
-            </p>
+          chapter.paragraphs.map((item: any, idx: number) => (
+            item.type === "image" ? (
+              <div key={idx} style={{ textAlign: "center", margin: "16px 0" }}>
+                <img
+                  src={item.src}
+                  alt=""
+                  style={{ maxWidth: "100%", borderRadius: "8px" }}
+                />
+              </div>
+            ) : (
+              <p
+                key={idx}
+                style={{
+                  marginBottom: "1.5em",
+                  textIndent: "0.5em"
+                }}
+              >
+                {item.content}
+              </p>
+            )
           ))
         ) : (
           <div style={{ display: "flex", justifyContent: "center", padding: "40px", color: "var(--text-secondary)" }}>

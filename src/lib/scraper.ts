@@ -258,25 +258,49 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
   // Content parser
   // Look for .epcontent, .epcontent-reading, or .reading-content
   const contentWrapper = $(".epcontent, .epcontent-reading, .reading-content, .entry-content").first();
-  
-  const paragraphs: string[] = [];
-  
-  // Extract paragraphs
-  contentWrapper.find("p, div").each((_, el) => {
-    // If it's a div, make sure it doesn't contain other paragraphs to prevent duplicates
-    if (el.tagName === "div" && $(el).find("p").length > 0) {
+
+  const paragraphs: any[] = [];
+
+  contentWrapper.find("p, img").each((_, el) => {
+    const tag = el.tagName?.toLowerCase();
+
+    if (tag === "img") {
+      // It's an image — grab src
+      const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || "";
+      if (src && !src.includes("data:image")) {
+        paragraphs.push({ type: "image", src });
+      }
       return;
     }
-    
+
+    // It's a <p> — skip if it contains child images (handled above)
+    if ($(el).find("img").length > 0) {
+      $(el).find("img").each((_, imgEl) => {
+        const src = $(imgEl).attr("src") || $(imgEl).attr("data-src") || "";
+        if (src && !src.includes("data:image")) {
+          paragraphs.push({ type: "image", src });
+        }
+      });
+      return;
+    }
+
     const text = $(el).text().trim();
+
+    // Strip ad scripts and junk
+    if (
+      !text ||
+      text.length < 3 ||
+      text.startsWith("window.") ||
+      text.includes("pubfuturetag") ||
+      text.includes("function(") ||
+      text.includes("var ") ||
+      text.match(/^\d{5,}$/) ||        // pure number spam like 111111111
+      text.startsWith("http")
+    ) return;
+
     const cleaned = cleanText(text);
-    
-    // Ignore short snippets that are clearly advertisements or spam
     if (cleaned && cleaned.length > 3) {
-      // Basic heuristic to skip long URLs or javascript snippets
-      if (!cleaned.startsWith("http") && !cleaned.includes("function(") && !cleaned.includes("var ")) {
-        paragraphs.push(cleaned);
-      }
+      paragraphs.push({ type: "text", content: cleaned });
     }
   });
   
