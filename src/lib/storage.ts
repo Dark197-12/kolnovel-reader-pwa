@@ -165,3 +165,8 @@ export function markChapterRead(novelSlug: string, chapterSlug: string) {
   }
 }
 
+export function getReadChapters(novelSlug: string): string[] {
+  const key = `read_chapters_${novelSlug}`;
+  return JSON.parse(localStorage.getItem(key) || "[]");
+}
+
