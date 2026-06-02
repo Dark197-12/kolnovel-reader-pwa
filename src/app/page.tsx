@@ -2,167 +2,168 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Compass, Search, BookMarked } from "lucide-react";
+import { BookOpen, BookMarked, RefreshCw, TrendingUp, Clock } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import { getBookmarks, Bookmark } from "@/lib/storage";
+import { getSavedBaseUrl } from "@/lib/storage";
+
+interface Novel {
+  title: string;
+  slug: string;
+  cover: string;
+  rating: string;
+  latestChapter: string;
+}
 
 export default function LibraryPage() {
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [novels, setNovels] = useState<Novel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [order, setOrder] = useState("update");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setBookmarks(getBookmarks());
     setMounted(true);
-    
-    // Read and apply saved theme
     const savedSettings = localStorage.getItem("kolnovel_reader_settings");
     if (savedSettings) {
       try {
         const { theme } = JSON.parse(savedSettings);
-        if (theme) {
-          document.documentElement.setAttribute("data-theme", theme);
-        }
+        if (theme) document.documentElement.setAttribute("data-theme", theme);
       } catch (e) {}
     }
   }, []);
 
-  if (!mounted) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", backgroundColor: "var(--bg-color)" }}>
-        <div style={{ width: "40px", height: "40px", borderRadius: "50%", border: "3px solid var(--border-color)", borderTopColor: "var(--accent-color)", animation: "spin 1s linear infinite" }}></div>
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!mounted) return;
+    fetchNovels();
+  }, [mounted, order]);
+
+  const fetchNovels = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/novels?order=${order}&baseUrl=https://free.kolnovel.com`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setNovels(data.novels || []);
+    } catch (err: any) {
+      setError(err.message || "فشل تحميل الروايات");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!mounted) return null;
 
   return (
     <main className="animate-fade-in" style={{ paddingBottom: "80px" }}>
-      {/* Glassmorphism Header */}
+      {/* Header */}
       <header className="app-header">
-        <h1 className="app-title">مكتبتي</h1>
+        <h1 className="app-title">ملوك الروايات</h1>
         <div style={{ color: "var(--text-secondary)" }}>
           <BookMarked size={22} />
         </div>
       </header>
 
-      {/* Main Content Area */}
       <div style={{ padding: "16px" }}>
-        {bookmarks.length === 0 ? (
-          /* Empty State */
-          <div 
-            className="animate-fade-up" 
-            style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              alignItems: "center", 
-              justifyContent: "center", 
-              minHeight: "60vh",
-              textAlign: "center",
-              padding: "24px"
-            }}
-          >
-            <div 
-              style={{ 
-                width: "80px", 
-                height: "80px", 
-                borderRadius: "50%", 
-                backgroundColor: "var(--bg-surface)",
+        {/* Filter Tabs */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          {[
+            { id: "update", label: "آخر التحديثات", icon: <Clock size={14} /> },
+            { id: "popular", label: "الأكثر شعبية", icon: <TrendingUp size={14} /> },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setOrder(tab.id)}
+              style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-secondary)",
-                marginBottom: "20px",
-                border: "1px solid var(--border-color)",
-                boxShadow: "inset 0 0 10px var(--shadow-color)"
+                gap: "6px",
+                padding: "8px 14px",
+                borderRadius: "20px",
+                border: `1px solid ${order === tab.id ? "var(--accent-color)" : "var(--border-color)"}`,
+                backgroundColor: order === tab.id ? "var(--accent-glow)" : "var(--bg-surface)",
+                color: order === tab.id ? "var(--accent-color)" : "var(--text-secondary)",
+                fontSize: "0.8rem",
+                fontWeight: "600",
+                cursor: "pointer",
               }}
             >
-              <BookOpen size={36} style={{ color: "var(--accent-color)" }} />
-            </div>
-            
-            <h2 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "8px" }}>المكتبة فارغة حالياً</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", maxWidth: "260px", lineHeight: "1.6", marginBottom: "24px" }}>
-              ابدأ بالبحث عن رواياتك المفضلة وأضفها إلى مكتبتك الشخصية للوصول السريع إليها.
-            </p>
-            
-            <Link href="/search" className="btn btn-primary" style={{ display: "inline-flex", gap: "8px" }}>
-              <Compass size={18} />
-              <span>استكشف الروايات</span>
-            </Link>
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+          <button
+            onClick={fetchNovels}
+            style={{
+              marginRight: "auto",
+              padding: "8px",
+              borderRadius: "20px",
+              border: "1px solid var(--border-color)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-secondary)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <RefreshCw size={15} />
+          </button>
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+            <div style={{ width: "36px", height: "36px", borderRadius: "50%", border: "3px solid var(--border-color)", borderTopColor: "var(--accent-color)", animation: "spin 1s linear infinite" }} />
+            <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-        ) : (
-          /* Bookshelf Grid */
+        )}
+
+        {/* Error */}
+        {error && !loading && (
+          <div style={{ textAlign: "center", padding: "40px", color: "var(--text-secondary)" }}>
+            <p style={{ marginBottom: "12px" }}>{error}</p>
+            <button onClick={fetchNovels} className="btn btn-primary">إعادة المحاولة</button>
+          </div>
+        )}
+
+        {/* Novels Grid */}
+        {!loading && !error && (
           <div className="animate-fade-up">
-            <h3 style={{ fontSize: "0.95rem", color: "var(--text-secondary)", marginBottom: "16px", fontWeight: "600" }}>
-              الروايات المتابعة ({bookmarks.length})
-            </h3>
-            
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
+              {novels.length} رواية
+            </p>
             <div className="shelf-grid">
-              {bookmarks.map((novel) => (
+              {novels.map((novel) => (
                 <div key={novel.slug} className="novel-card">
                   <Link href={`/novel/${novel.slug}`}>
                     <div className="novel-card-image">
                       {novel.cover ? (
-                        <img 
-                          src={novel.cover} 
-                          alt={novel.title} 
-                          loading="lazy" 
-                        />
+                        <img src={novel.cover} alt={novel.title} loading="lazy" />
                       ) : (
                         <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
                           <BookOpen size={32} />
                         </div>
                       )}
+                      {novel.rating && (
+                        <div style={{
+                          position: "absolute", top: "6px", left: "6px",
+                          backgroundColor: "rgba(0,0,0,0.7)",
+                          color: "#ffd700", fontSize: "0.65rem", fontWeight: "700",
+                          padding: "2px 6px", borderRadius: "6px"
+                        }}>
+                          ★ {novel.rating}
+                        </div>
+                      )}
                     </div>
                   </Link>
-                  
                   <div className="novel-card-info">
                     <Link href={`/novel/${novel.slug}`}>
                       <h4 className="novel-card-title">{novel.title}</h4>
                     </Link>
-                    
-                    {novel.lastReadSlug ? (
-                      <Link 
-                        href={`/chapter/${novel.lastReadSlug}?novel=${novel.slug}`}
-                        style={{
-                          display: "block",
-                          marginTop: "8px",
-                          padding: "6px 8px",
-                          backgroundColor: "var(--bg-surface-hover)",
-                          borderRadius: "8px",
-                          fontSize: "0.7rem",
-                          fontWeight: "500",
-                          color: "var(--accent-color)",
-                          textAlign: "center",
-                          border: "1px solid var(--border-color)",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis"
-                        }}
-                      >
-                        متابعة القراءة: {novel.lastReadName?.replace(/الفصل\s+/i, "")}
-                      </Link>
-                    ) : (
-                      <Link 
-                        href={`/novel/${novel.slug}`}
-                        style={{
-                          display: "block",
-                          marginTop: "8px",
-                          padding: "6px 8px",
-                          backgroundColor: "var(--bg-surface-hover)",
-                          borderRadius: "8px",
-                          fontSize: "0.75rem",
-                          fontWeight: "500",
-                          color: "var(--text-secondary)",
-                          textAlign: "center",
-                          border: "1px solid var(--border-color)"
-                        }}
-                      >
-                        ابدأ القراءة
-                      </Link>
+                    {novel.latestChapter && (
+                      <span style={{ fontSize: "0.65rem", color: "var(--text-secondary)", display: "block", marginTop: "4px" }}>
+                        {novel.latestChapter}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -172,7 +173,6 @@ export default function LibraryPage() {
         )}
       </div>
 
-      {/* Bottom Navigation Tab Bar */}
       <BottomNav />
     </main>
   );
