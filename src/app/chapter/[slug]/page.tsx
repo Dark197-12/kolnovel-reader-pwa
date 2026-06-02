@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, Settings, ChevronLeft, ChevronRight, BookOpen, Check, Type } from "lucide-react";
 import { 
   getSavedBaseUrl, 
