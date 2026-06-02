@@ -258,31 +258,36 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
   // Content parser
   // Look for .epcontent, .epcontent-reading, or .reading-content
   const contentWrapper = $(".epcontent, .epcontent-reading, .reading-content, .entry-content").first();
-
   const paragraphs: any[] = [];
+
+  const isJunk = (text: string) =>
+    !text ||
+    text.length < 3 ||
+    text.startsWith("window.") ||
+    text.startsWith("<?") ||
+    text.includes("pubfuturetag") ||
+    text.includes("random_bytes") ||
+    text.includes("bin2hex") ||
+    text.includes("function(") ||
+    text.includes("var ") ||
+    text.includes("<?php") ||
+    text.match(/^\d{5,}$/) !== null ||
+    text.startsWith("http");
 
   const processNode = (el: any) => {
     const tag = el.tagName?.toLowerCase();
 
+    // Text node
     if (!tag) {
-      // Plain text node
       const text = (el.data || "").trim();
-      if (
-        text.length > 3 &&
-        !text.startsWith("window.") &&
-        !text.includes("pubfuturetag") &&
-        !text.includes("function(") &&
-        !text.includes("var ") &&
-        !text.match(/^\d{5,}$/) &&
-        !text.startsWith("http")
-      ) {
+      if (!isJunk(text)) {
         const cleaned = cleanText(text);
-        if (cleaned && cleaned.length > 3) {
-          paragraphs.push({ type: "text", content: cleaned });
-        }
+        if (cleaned.length > 3) paragraphs.push({ type: "text", content: cleaned });
       }
       return;
     }
+
+    if (tag === "script" || tag === "style") return;
 
     if (tag === "img") {
       const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || "";
@@ -292,64 +297,31 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       return;
     }
 
-    // Skip script/style tags entirely
-    if (tag === "script" || tag === "style") return;
+    if (tag === "p" || tag === "div") {
+      const images = $(el).find("img");
+      const textContent = $(el).clone().find("img, script, style").remove().end().text().trim();
 
-    if (tag === "p") {
-      // Walk p's children IN ORDER to preserve image/text sequence
-      $(el).contents().each((_, child: any) => {
-        const childTag = child.tagName?.toLowerCase();
-
-        if (childTag === "img") {
-          const src = $(child).attr("src") || $(child).attr("data-src") || $(child).attr("data-lazy-src") || "";
-          if (src && !src.includes("data:image")) {
-            paragraphs.push({ type: "image", src });
-          }
-          return;
+      // If this element has ONLY images (no meaningful text), group them as an image-row
+      if (images.length > 0 && isJunk(textContent)) {
+        const srcs: string[] = [];
+        images.each((_, img) => {
+          const src = $(img).attr("src") || $(img).attr("data-src") || $(img).attr("data-lazy-src") || "";
+          if (src && !src.includes("data:image")) srcs.push(src);
+        });
+        if (srcs.length === 1) {
+          paragraphs.push({ type: "image", src: srcs[0] });
+        } else if (srcs.length > 1) {
+          paragraphs.push({ type: "image-row", srcs });
         }
+        return;
+      }
 
-        if (child.type === "text") {
-          const text = (child.data || "").trim();
-          if (
-            text.length > 3 &&
-            !text.startsWith("window.") &&
-            !text.includes("pubfuturetag") &&
-            !text.includes("function(") &&
-            !text.includes("var ") &&
-            !text.match(/^\d{5,}$/) &&
-            !text.startsWith("http")
-          ) {
-            const cleaned = cleanText(text);
-            if (cleaned && cleaned.length > 3) {
-              paragraphs.push({ type: "text", content: cleaned });
-            }
-          }
-          return;
-        }
-
-        // Inline elements like <strong>, <em>, <span> — grab their text
-        if (childTag && !["script", "style"].includes(childTag)) {
-          const text = $(child).text().trim();
-          if (
-            text.length > 3 &&
-            !text.startsWith("window.") &&
-            !text.includes("pubfuturetag") &&
-            !text.includes("function(") &&
-            !text.includes("var ") &&
-            !text.match(/^\d{5,}$/) &&
-            !text.startsWith("http")
-          ) {
-            const cleaned = cleanText(text);
-            if (cleaned && cleaned.length > 3) {
-              paragraphs.push({ type: "text", content: cleaned });
-            }
-          }
-        }
-      });
+      // Mixed content: walk children in order
+      $(el).contents().each((_, child) => processNode(child));
       return;
     }
 
-    // For all other elements (div, section, etc.) recurse into children in order
+    // Everything else: recurse
     $(el).contents().each((_, child) => processNode(child));
   };
 

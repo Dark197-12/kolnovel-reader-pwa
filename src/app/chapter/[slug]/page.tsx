@@ -256,27 +256,29 @@ export default function ChapterReaderPage({
         </h2>
 
         {chapter.paragraphs && chapter.paragraphs.length > 0 ? (
-          chapter.paragraphs.map((item: any, idx: number) => (
-            item.type === "image" ? (
-              <div key={idx} style={{ textAlign: "center", margin: "16px 0" }}>
-                <img
-                  src={item.src}
-                  alt=""
-                  style={{ maxWidth: "100%", borderRadius: "8px" }}
-                />
-              </div>
-            ) : (
-              <p
-                key={idx}
-                style={{
-                  marginBottom: "1.5em",
-                  textIndent: "0.5em"
-                }}
-              >
+          chapter.paragraphs.map((item: any, idx: number) => {
+            if (item.type === "image") {
+              return (
+                <div key={idx} style={{ textAlign: "center", margin: "16px 0" }}>
+                  <img src={item.src} alt="" style={{ maxWidth: "100%", borderRadius: "8px" }} />
+                </div>
+              );
+            }
+            if (item.type === "image-row") {
+              return (
+                <div key={idx} style={{ display: "flex", gap: "8px", justifyContent: "center", margin: "16px 0", flexWrap: "wrap" }}>
+                  {item.srcs.map((src: string, i: number) => (
+                    <img key={i} src={src} alt="" style={{ maxWidth: `${Math.floor(96 / item.srcs.length)}%`, borderRadius: "8px", flex: "1" }} />
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <p key={idx} style={{ marginBottom: "1.5em", textIndent: "0.5em" }}>
                 {item.content}
               </p>
-            )
-          ))
+            );
+          })
         ) : (
           <div style={{ display: "flex", justifyContent: "center", padding: "40px", color: "var(--text-secondary)" }}>
             لا يوجد نص متاح في هذا الفصل.
