@@ -156,3 +156,12 @@ export function saveReadingProgress(
   // Also update corresponding bookshelf item
   updateBookmarkProgress(novelSlug, chapterSlug, chapterName);
 }
+export function markChapterRead(novelSlug: string, chapterSlug: string) {
+  const key = `read_chapters_${novelSlug}`;
+  const existing = JSON.parse(localStorage.getItem(key) || "[]");
+  if (!existing.includes(chapterSlug)) {
+    existing.push(chapterSlug);
+    localStorage.setItem(key, JSON.stringify(existing));
+  }
+}
+
