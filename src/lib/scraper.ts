@@ -261,12 +261,10 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
 
   const paragraphs: any[] = [];
 
-  contentWrapper.find("p, img").each((_, el) => {
+  const processNode = (el: any) => {
     const tag = el.tagName?.toLowerCase();
 
     if (tag === "img") {
-      // Only grab img tags that are NOT inside a <p> (those will be caught when we process the <p>)
-      if ($(el).parents("p").length > 0) return;
       const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || "";
       if (src && !src.includes("data:image")) {
         paragraphs.push({ type: "image", src });
@@ -274,18 +272,30 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       return;
     }
 
-    // It's a <p>
-    const imgs = $(el).find("img");
-    if (imgs.length > 0) {
-      // Render images inside this <p>
-      imgs.each((_, imgEl) => {
-        const src = $(imgEl).attr("src") || $(imgEl).attr("data-src") || $(imgEl).attr("data-lazy-src") || "";
-        if (src && !src.includes("data:image")) {
-          paragraphs.push({ type: "image", src });
+    if (tag === "p") {
+      // Process children of <p> in order (text nodes + images)
+      $(el).contents().each((_, child: any) => {
+        if (child.type === "tag" && child.tagName?.toLowerCase() === "img") {
+          const src = $(child).attr("src") || $(child).attr("data-src") || $(child).attr("data-lazy-src") || "";
+          if (src && !src.includes("data:image")) {
+            paragraphs.push({ type: "image", src });
+          }
         }
       });
-      // Also grab any text alongside the image
+
+      // Then grab the text (minus images)
       const text = $(el).clone().find("img").remove().end().text().trim();
+      if (
+        !text ||
+        text.length < 3 ||
+        text.startsWith("window.") ||
+        text.includes("pubfuturetag") ||
+        text.includes("function(") ||
+        text.includes("var ") ||
+        text.match(/^\d{5,}$/) ||
+        text.startsWith("http")
+      ) return;
+
       const cleaned = cleanText(text);
       if (cleaned && cleaned.length > 3) {
         paragraphs.push({ type: "text", content: cleaned });
@@ -293,24 +303,11 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       return;
     }
 
-    // Plain text <p>
-    const text = $(el).text().trim();
-    if (
-      !text ||
-      text.length < 3 ||
-      text.startsWith("window.") ||
-      text.includes("pubfuturetag") ||
-      text.includes("function(") ||
-      text.includes("var ") ||
-      text.match(/^\d{5,}$/) ||
-      text.startsWith("http")
-    ) return;
+    // For divs/other containers, recurse into children
+    $(el).children().each((_, child) => processNode(child));
+  };
 
-    const cleaned = cleanText(text);
-    if (cleaned && cleaned.length > 3) {
-      paragraphs.push({ type: "text", content: cleaned });
-    }
-  });
+  contentWrapper.children().each((_, el) => processNode(el));
   
   // Find next/prev chapter links if they exist on the page to help with navigation
   let nextChapterSlug = "";
