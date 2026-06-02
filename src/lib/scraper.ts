@@ -264,6 +264,26 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
   const processNode = (el: any) => {
     const tag = el.tagName?.toLowerCase();
 
+    if (!tag) {
+      // Plain text node
+      const text = (el.data || "").trim();
+      if (
+        text.length > 3 &&
+        !text.startsWith("window.") &&
+        !text.includes("pubfuturetag") &&
+        !text.includes("function(") &&
+        !text.includes("var ") &&
+        !text.match(/^\d{5,}$/) &&
+        !text.startsWith("http")
+      ) {
+        const cleaned = cleanText(text);
+        if (cleaned && cleaned.length > 3) {
+          paragraphs.push({ type: "text", content: cleaned });
+        }
+      }
+      return;
+    }
+
     if (tag === "img") {
       const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || "";
       if (src && !src.includes("data:image")) {
@@ -272,42 +292,68 @@ export async function getChapterDetails(slug: string, baseUrl: string = DEFAULT_
       return;
     }
 
+    // Skip script/style tags entirely
+    if (tag === "script" || tag === "style") return;
+
     if (tag === "p") {
-      // Process children of <p> in order (text nodes + images)
+      // Walk p's children IN ORDER to preserve image/text sequence
       $(el).contents().each((_, child: any) => {
-        if (child.type === "tag" && child.tagName?.toLowerCase() === "img") {
+        const childTag = child.tagName?.toLowerCase();
+
+        if (childTag === "img") {
           const src = $(child).attr("src") || $(child).attr("data-src") || $(child).attr("data-lazy-src") || "";
           if (src && !src.includes("data:image")) {
             paragraphs.push({ type: "image", src });
           }
+          return;
+        }
+
+        if (child.type === "text") {
+          const text = (child.data || "").trim();
+          if (
+            text.length > 3 &&
+            !text.startsWith("window.") &&
+            !text.includes("pubfuturetag") &&
+            !text.includes("function(") &&
+            !text.includes("var ") &&
+            !text.match(/^\d{5,}$/) &&
+            !text.startsWith("http")
+          ) {
+            const cleaned = cleanText(text);
+            if (cleaned && cleaned.length > 3) {
+              paragraphs.push({ type: "text", content: cleaned });
+            }
+          }
+          return;
+        }
+
+        // Inline elements like <strong>, <em>, <span> — grab their text
+        if (childTag && !["script", "style"].includes(childTag)) {
+          const text = $(child).text().trim();
+          if (
+            text.length > 3 &&
+            !text.startsWith("window.") &&
+            !text.includes("pubfuturetag") &&
+            !text.includes("function(") &&
+            !text.includes("var ") &&
+            !text.match(/^\d{5,}$/) &&
+            !text.startsWith("http")
+          ) {
+            const cleaned = cleanText(text);
+            if (cleaned && cleaned.length > 3) {
+              paragraphs.push({ type: "text", content: cleaned });
+            }
+          }
         }
       });
-
-      // Then grab the text (minus images)
-      const text = $(el).clone().find("img").remove().end().text().trim();
-      if (
-        !text ||
-        text.length < 3 ||
-        text.startsWith("window.") ||
-        text.includes("pubfuturetag") ||
-        text.includes("function(") ||
-        text.includes("var ") ||
-        text.match(/^\d{5,}$/) ||
-        text.startsWith("http")
-      ) return;
-
-      const cleaned = cleanText(text);
-      if (cleaned && cleaned.length > 3) {
-        paragraphs.push({ type: "text", content: cleaned });
-      }
       return;
     }
 
-    // For divs/other containers, recurse into children
-    $(el).children().each((_, child) => processNode(child));
+    // For all other elements (div, section, etc.) recurse into children in order
+    $(el).contents().each((_, child) => processNode(child));
   };
 
-  contentWrapper.children().each((_, el) => processNode(el));
+  contentWrapper.contents().each((_, el) => processNode(el));
   
   // Find next/prev chapter links if they exist on the page to help with navigation
   let nextChapterSlug = "";
